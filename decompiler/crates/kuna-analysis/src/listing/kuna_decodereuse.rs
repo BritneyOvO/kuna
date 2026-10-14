@@ -2,7 +2,6 @@
 
 use super::{
     decode::Decoded,
-    model::RawOp,
     xrefs::{FullCapture, FullOp},
 };
 use kuna_base::{address::Address, error::KunaResult, space::AddrSpace};
@@ -54,11 +53,7 @@ pub(crate) fn capture(
     let mut text = Text(&mut decoded.mnemonic, &mut decoded.operands);
     let len = translate.one_instruction_reusable(full, &mut text, &addr, &mut context)?;
     decoded.len = len.max(0) as u32;
-    decoded.ops.clear();
-    decoded.ops.extend(full.ops().iter().map(|op| RawOp {
-        opcode: op.opcode,
-        in0: op.ins.first().cloned(),
-    }));
+    full.raw_ops(at.wrapping_add(u64::from(decoded.len)), &mut decoded.ops);
     Ok(context.map(|context| {
         Rc::new(ReusableDecode {
             context,

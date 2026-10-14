@@ -344,8 +344,8 @@ impl Body {
                 continue;
             }
             let Some(len) = decode(ctx.translate, vma, ctx.code, cap) else { continue };
-            let raw: Vec<RawOp> =
-                cap.ops().iter().map(|op| RawOp { opcode: op.opcode, in0: op.ins.first().cloned() }).collect();
+            let mut raw: Vec<RawOp> = Vec::new();
+            cap.raw_ops(vma.wrapping_add(u64::from(len)), &mut raw);
             let c = classify(&raw, vma, len);
             let mut next = Vec::new();
             let mut halts = false;

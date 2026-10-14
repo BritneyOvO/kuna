@@ -515,17 +515,28 @@ pub(crate) struct FullCapture {
     ops: Vec<FullOp>,
     /// How many of `ops` the current instruction has filled.
     filled: usize,
+    /// (kuna) The skips the current instruction decides for itself.
+    fold: super::kuna_fixedskip::SkipFold,
 }
 
 impl FullCapture {
     /// Start capturing a new instruction over the retained storage.
     pub(crate) fn begin(&mut self) {
         self.filled = 0;
+        self.fold.begin();
     }
 
     /// The ops the current instruction emitted.
     pub(crate) fn ops(&self) -> &[FullOp] {
         &self.ops[..self.filled]
+    }
+
+    /// The current instruction's ops as the flow classifier reads them, with the
+    /// skips it decides for itself settled against its fall-through `fall`.
+    pub(crate) fn raw_ops(&self, fall: u64, out: &mut Vec<RawOp>) {
+        out.clear();
+        out.extend(self.ops().iter().map(|op| RawOp { opcode: op.opcode, in0: op.ins.first().cloned() }));
+        self.fold.apply(out, fall);
     }
 }
 
@@ -537,6 +548,7 @@ impl PcodeEmit for FullCapture {
         outvar: Option<&VarnodeData>,
         vars: &[VarnodeData],
     ) {
+        self.fold.observe(opc, outvar, vars);
         if self.filled == self.ops.len() {
             self.ops.push(FullOp { opcode: opc, out: outvar.cloned(), ins: vars.to_vec() });
         } else {
@@ -1012,12 +1024,7 @@ fn descend(
                 recovered_spans.insert(vma, len);
             }
 
-            raw.clear();
-            raw.extend(
-                cap.ops()
-                    .iter()
-                    .map(|op| RawOp { opcode: op.opcode, in0: op.ins.first().cloned() }),
-            );
+            cap.raw_ops(vma.wrapping_add(u64::from(len)), &mut raw);
             let c = classify(&raw, vma, len);
             if let Some(flow) = st.flow.as_mut() {
                 flow.insns.push((vma, len, c.fall_through.is_some()));
@@ -1429,11 +1436,8 @@ fn veneer_at(
     let mut cap = FullCapture::default();
     for _ in 0..MAX_VENEER_INSNS {
         let len = decode(translate, vma, code_space, &mut cap)?;
-        let raw: Vec<RawOp> = cap
-            .ops()
-            .iter()
-            .map(|op| RawOp { opcode: op.opcode, in0: op.ins.first().cloned() })
-            .collect();
+        let mut raw: Vec<RawOp> = Vec::new();
+        cap.raw_ops(vma.wrapping_add(u64::from(len)), &mut raw);
         let c = classify(&raw, vma, len);
         if !c.flows.is_empty() || c.flow.is_call || c.flow.kind == FlowKind::Return {
             return None;

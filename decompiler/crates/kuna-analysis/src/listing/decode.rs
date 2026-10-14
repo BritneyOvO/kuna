@@ -36,6 +36,8 @@ struct OpCapture {
     /// `PUSH imm` through a unique temporary before STORE slot 2.
     scalar_origins: Vec<(VarnodeData, u64)>,
     want_stored_scalars: bool,
+    /// (kuna) The skips this instruction decides for itself.
+    fold: super::kuna_fixedskip::SkipFold,
 }
 
 impl OpCapture {
@@ -82,6 +84,7 @@ impl PcodeEmit for OpCapture {
         vars: &[VarnodeData],
     ) {
         self.ops.push(RawOp { opcode: opc, in0: vars.first().cloned() });
+        self.fold.observe(opc, outvar, vars);
         if !self.want_stored_scalars {
             return;
         }
@@ -165,6 +168,7 @@ pub fn decode_one(
 
     let mut cap = OpCapture { want_stored_scalars, ..OpCapture::default() };
     let len = translate.one_instruction(&mut cap, &addr)?;
+    cap.fold.apply(&mut cap.ops, vma.wrapping_add(len.max(0) as u64));
 
     let mut asm = AsmCapture::default();
     if want_assembly {
@@ -202,6 +206,9 @@ pub(crate) fn decode_one_with_assembly(
         operands: std::mem::take(&mut decoded.operands),
     };
     let length = translate.one_instruction_with_assembly(&mut cap, &mut asm, &addr);
+    if let Ok(len) = length {
+        cap.fold.apply(&mut cap.ops, vma.wrapping_add(len.max(0) as u64));
+    }
     decoded.ops = cap.ops;
     decoded.mnemonic = asm.mnemonic;
     decoded.operands = asm.operands;

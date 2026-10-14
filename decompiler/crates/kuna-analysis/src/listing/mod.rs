@@ -47,6 +47,7 @@ mod kuna_flowmode;
 mod kuna_armwalkmode;
 pub(crate) mod kuna_framemode;
 pub(crate) mod kuna_decodereuse;
+mod kuna_fixedskip;
 mod kuna_picbase;
 mod kuna_picpool;
 mod kuna_poolref;
