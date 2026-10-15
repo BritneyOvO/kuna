@@ -2056,6 +2056,19 @@ impl ScopeLocal {
     /// and returns the new name; returns `None` when there is no containing Symbol or
     /// the reference is not a whole-symbol (offset-0) reference.  A symbol that is
     /// already named is left untouched (idempotent re-run).
+    /// (kuna `libcnames`) The local Symbol whose whole storage starts at
+    /// `addr` -- what a `&symbol` reference to that address names -- when it is
+    /// an ordinary local (not a parameter) of this scope.
+    pub fn whole_local_symbol_at(&self, addr: &Address) -> Option<crate::database::SymbolId> {
+        let eref = self.db.find_container(self.scope, addr, 1, &Address::default())?;
+        let entry = self.db.entry(self.scope, eref);
+        let sym_off = (addr.get_offset().wrapping_sub(entry.get_addr().get_offset()) as int4)
+            .wrapping_add(entry.get_offset());
+        let sym = entry.symbol;
+        (sym_off == 0 && self.db.symbol(sym).get_category() == crate::database::symbol_category::NO_CATEGORY)
+            .then_some(sym)
+    }
+
     pub fn name_undefined_spacebase_symbol(
         &mut self,
         addr: &Address,

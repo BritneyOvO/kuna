@@ -178,7 +178,7 @@ fn printed_by_pass(fd: &Funcdata, name: &str, touched: &[DirectiveSymbol]) -> bo
 fn printed_highs(fd: &Funcdata, name: &str) -> Vec<HighVariableId> {
     fd.high_bank()
         .iter()
-        .filter(|(id, h)| kuna_decomp::kuna_libcnames::shown_number(fd, *id).or(h.kuna_name()) == Some(name))
+        .filter(|(_, h)| h.kuna_name().map(|n| kuna_decomp::kuna_libcnames::shown_number(fd, n).unwrap_or(n)) == Some(name))
         // A CONCAT piece shares its root's name and carries the root's in-symbol
         // offset; the root (offset -1) is the declaration and the only nameable
         // target, exactly as the printer's decl loop decides it.
