@@ -1411,6 +1411,64 @@ that `undefinedN` cannot match by width; 10 functions reach a perfect score and
 2 leave it, 327 improve and 13 get worse, each of the worse a slot the C
 declares a pointer where the source has an integer.
 
+**Splitting a frame row at the locals the C declares inside it (`option
+slotsplit`).** `framelayout` reports a slot at the width an early pass saw,
+and a span that layout merged (several spills side by side, or a buffer and
+what follows it) reaches the rows as one `undefinedN`: `local_18 undefined12`
+although the C declares `double v1; // stack - 0x18 | ...` at its start. Under
+`option slotsplit` (default ON) such a row is cut at the homes of the printed
+declarations lying wholly inside it, from
+`decompiler/crates/kuna-decomp/src/p6_variables/kuna_slotsplit.rs
+(split_rows)`. The homes are the `DeclaredSlots` index `slotreport` builds
+(`kuna_slotreport.rs (homes_within)`): a declaration's stack homes at its
+declared width, over its high and the highs declared through it. Each declared
+piece takes the type its declarations spell (`kuna_slotreport.rs
+(piece_type)`): their common type, `undefined1` for one-byte integers or
+`bool` (the `bytehonest` reasoning), `undefinedN` when they disagree. Each gap
+between pieces stays `undefinedK` at its own offset and width; the piece at
+the row's start keeps the row's name, the others take the frame's name for
+their offset. A row of a scalar's width (1, 2, 4 or 8 bytes) may be one value
+the type system narrowed, an `int` spilled whole and printed as `unsigned
+short`, so it splits only at a pointer or floating-point declaration; a row of
+any other width is never one scalar's slot and splits at every declaration
+inside. Splitting the scalar-width rows at their narrower integers too was
+measured: it turned 159 more matches right and 119 that were right wrong, the
+width-only row having matched a source `int` or `long` the C narrowed. A row
+is left whole when two of its pieces would overlap. The rows are cut in order,
+and the offsets every row starts at, and every piece already cut, are taken: no
+piece or gap starts at a taken offset, and a gap ends at the first taken
+offset inside it, so two overlapping width-only rows never both report a piece
+at one offset and a gap never runs over a row that starts inside it (it can
+still run over one that starts before it, such as a `struct stat` Symbol
+spanning the filler row). When a gap stops at a taken offset, the bytes past
+the row that starts there are no longer reported: dexter -O2 `_entryPoint`
+reports 172 bytes of its frame instead of 196. Only rows still
+width-only are split: a row `slotreport` or `slotptr` typed keeps its type.
+The pieces are ordinary frame rows, so the use evidence of the storage they
+now name (`CodeProvenance::apply_to_variables`) attaches to them as it does to
+any stack row. Every piece after a row's first is marked `split_piece`. The
+callee-vote redo check keeps a redo only when its frame rows match the first
+decompile's by count
+(`decompiler/crates/kuna-cli/src/decompile_all/callee_first.rs (same_arity)`),
+and it counts rows without the mark, so the split, which follows the declared
+types a redo may change, never decides which C is kept. The option changes no
+p-code and no emitted C; the rows reach the same surfaces as `slotreport`'s
+(`--json`, the browser decompiler, the `; stack:` lines of
+`decompile-project`'s `.asm`). Over the four decbench sets of the type
+campaign it turns a net 738 stack-local matches from wrong to right: 503 to a
+typed piece and 240 to a width-only gap the metric credits by width, against
+5 it turns wrong. 125 functions reach a perfect score and none leave it, 711
+improve and 4 get worse. In two of those (`sshsk_load_resident` in ssh and
+ssh-add) the matcher pairs a source `long` with an `int *` piece that comes
+from a printed declaration's stack home, a claim already wrong without the
+split; in u-boot `ubi_resize_volume` it pairs a 4-byte `int` with an 8-byte
+width-only gap; in u-boot `fdt_setprop` it pairs a register local, matched
+right before, with an `unsigned int *` piece by address overlap. The fifth
+wrong match (u-boot `erase_worker`, again an `int` paired with an 8-byte gap)
+is in a function that improves overall. Against main, it costs +0.86% CPU and +0.47%
+wall time with `--json` and -0.28% wall time in text mode, where a separately
+built copy of main measured +1.01%, -0.93% and -1.21%.
+
 **Which offsets are frame (`option protoranges`, default on).** The local
 scope's window is the prototype's local range plus its parameter range, and
 `MapState` then clears the parameter range back out, so only the local range
