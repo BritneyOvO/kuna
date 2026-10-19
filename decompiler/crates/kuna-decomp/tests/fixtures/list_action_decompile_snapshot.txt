@@ -214,81 +214,82 @@
 0209                       lowerswitchdetect
 0210                       stripstackguard
 0211                       stripmsvcstackguard
-0212                       removesecuritycheck
-0213                       devectorize
-0214                       strlenscan
-0215                       returnsplit
-0216                       returndup
-0217                       earlyreturn
-0218                       switchreturn
-0219                       unjustparams
-0220                       starttypes
-0221                       activereturn
+0212                       removegoboundscheck
+0213                       removesecuritycheck
+0214                       devectorize
+0215                       strlenscan
+0216                       returnsplit
+0217                       returndup
+0218                       earlyreturn
+0219                       switchreturn
+0220                       unjustparams
+0221                       starttypes
+0222                       activereturn
 
-0222                  mapped_local_sync
-0223                  startcleanup
-0224 repeat           cleanup
-0225              multnegone
-0226              addunsigned
-0227              2comp2sub
-0228              dumptyhumplate
-0229              subright
-0230              floatsigncleanup
-0231              expandload
-0232              ptrsubcharconstant
-0233              extensionpush
-0234              piecestructure
-0235              splitcopy
-0236              splitload
-0237              splitstore
-0238              stringcopy
-0239              stringstore
-0240              memsetcopy
-0241              rodatastringcopy
-0242              bitfield_store
-0243              bitfield_out
-0244              bitfield_load
-0245              bitfield_in
-0246              pull_absorb
-0247              insert_absorb
+0223                  mapped_local_sync
+0224                  startcleanup
+0225 repeat           cleanup
+0226              multnegone
+0227              addunsigned
+0228              2comp2sub
+0229              dumptyhumplate
+0230              subright
+0231              floatsigncleanup
+0232              expandload
+0233              ptrsubcharconstant
+0234              extensionpush
+0235              piecestructure
+0236              splitcopy
+0237              splitload
+0238              splitstore
+0239              stringcopy
+0240              stringstore
+0241              memsetcopy
+0242              rodatastringcopy
+0243              bitfield_store
+0244              bitfield_out
+0245              bitfield_load
+0246              bitfield_in
+0247              pull_absorb
+0248              insert_absorb
 
-0248                  prefercomplement
-0249                  structuretransform
-0250        !         armfloatargs
-0251        !         assignhigh
-0252        !         mergerequired
-0253        !         markexplicit
-0254        !         markimplied
-0255        !         mergemultientry
-0256        !         mergecopy
-0257        !         dominantcopy
-0258        !         dynamicsymbols
-0259        !         markindirectonly
-0260        !         mergeadjacent
-0261        !         mergetype
-0262        !         hideshadow
-0263        !         copymarker
-0264                  latedonothing
-0265                  blockstructure
-0266                  prefercomplement
-0267                  structuretransform
-0268                  branchflip
-0269                  presentcompareform
-0270        !         outputprototype
-0271        !         inputprototype
-0272        !         mapglobals
-0273        !         dynamicsymbols
-0274        !         namevars
-0275                  calltargettype
-0276        !         setcasts
-0277                  finalstructure
-0278                  gotoreduce
-0279                  taildup
-0280                  ifelseflatten
-0281                  crossjumprevert
-0282                  dedupitetail
-0283                  iteregion
-0284                  iteboolean
-0285                  paramcopyhoist
-0286        !         prototypewarnings
-0287                  stop
+0249                  prefercomplement
+0250                  structuretransform
+0251        !         armfloatargs
+0252        !         assignhigh
+0253        !         mergerequired
+0254        !         markexplicit
+0255        !         markimplied
+0256        !         mergemultientry
+0257        !         mergecopy
+0258        !         dominantcopy
+0259        !         dynamicsymbols
+0260        !         markindirectonly
+0261        !         mergeadjacent
+0262        !         mergetype
+0263        !         hideshadow
+0264        !         copymarker
+0265                  latedonothing
+0266                  blockstructure
+0267                  prefercomplement
+0268                  structuretransform
+0269                  branchflip
+0270                  presentcompareform
+0271        !         outputprototype
+0272        !         inputprototype
+0273        !         mapglobals
+0274        !         dynamicsymbols
+0275        !         namevars
+0276                  calltargettype
+0277        !         setcasts
+0278                  finalstructure
+0279                  gotoreduce
+0280                  taildup
+0281                  ifelseflatten
+0282                  crossjumprevert
+0283                  dedupitetail
+0284                  iteregion
+0285                  iteboolean
+0286                  paramcopyhoist
+0287        !         prototypewarnings
+0288                  stop

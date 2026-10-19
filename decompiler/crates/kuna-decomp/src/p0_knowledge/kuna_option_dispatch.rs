@@ -737,6 +737,9 @@ kuna_options! { self, p1;
     "msvcstackguard" => {
         on_off!(strip_msvc_stack_guard, "MSVC /GS frame-cookie stripping")
     },
+    "goboundscheck" => {
+        on_off!(strip_go_bounds_check, "Go bounds-check branch recovery")
+    },
     "securitycheck" => {
         on_off!(strip_security_check, "Rust security-check branch stripping")
     },

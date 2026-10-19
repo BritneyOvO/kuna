@@ -588,3 +588,23 @@ virtualize-to-goto tie-break is the structurer's own address-keyed order over
 identification is recomputed by every consumer. How the structurer matches
 schemas over this tree, virtualizes edges, and falls back to
 `CollapseStructure` is chapter [08 — Structuring](08-structuring.md).
+
+## Go implicit bounds guards
+
+`p7_regions/kuna_goboundscheck.rs (ActionRemoveGoBoundsCheck)` implements the
+opt-in `goboundscheck` transform, default off. Go index and slice expressions
+lower to unsigned comparisons followed by an out-of-range runtime panic arm.
+The pass requires a two-successor CBRANCH with a comparison or boolean negation,
+a direct basic-block successor with no outgoing edges, and exactly one call to
+an exact `runtime.panicBounds` (Go 1.27) or older bounds-panic entry point, optionally
+suffixed `.abi0`. It rejects handlers containing memory stores or any other call.
+The P4 no-return contract recognizes these exact names only while the option is on.
+
+The pass removes the failure edge and collects unreachable blocks, then allows
+the normal fullloop dead-code passes to simplify the remaining function. It does
+not rewrite accesses into Go syntax or reconstruct erased names, slice capacity,
+or ABI arguments. The emitted C omits the panic behavior for invalid indices;
+GED improvements demonstrate only source-level CFG recovery. Explicit application
+panic functions, unresolved symbols, shared handlers with extra effects, and
+unrecognized compiler versions stay unchanged. The constant-time disabled gate
+keeps all other languages on their previous path.

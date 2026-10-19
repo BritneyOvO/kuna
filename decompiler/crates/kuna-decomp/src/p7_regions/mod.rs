@@ -5,6 +5,7 @@
 
 pub mod kuna_msvcstackguard;
 pub mod kuna_securitycheck;
+pub mod kuna_goboundscheck;
 pub mod kuna_stackguard;
 pub mod kuna_regiongraph;
 pub mod kuna_regionid;

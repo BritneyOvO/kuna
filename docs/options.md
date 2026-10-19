@@ -468,6 +468,8 @@ Three tiers:
 | numerical integer conversion is stored in a float local | [`fputruncviews`](#fputruncviews) |
 | short call argument uses inverse floating storage unions | [`fputruncviews`](#fputruncviews) |
 | one floating register carries both integers and genuine floating values | [`fputruncviews`](#fputruncviews) |
+| Go slice access guarded by a branch to runtime.panicBounds or runtime.panicIndex | [`goboundscheck`](#goboundscheck) |
+| implicit bounds guards inflate recovered CFGs | [`goboundscheck`](#goboundscheck) |
 | puts/printf arguments untyped so string literals render as bare constants or dat_ addresses | [`libproto`](#libproto) |
 | imports carry no signatures and call arguments stay untyped | [`libproto`](#libproto) |
 | a caller's parameter is unsigned long where it is only ever passed to a libc function that takes a char */int | [`libcsigs`](#libcsigs) |
@@ -2270,6 +2272,14 @@ The control surface: each of these can make output worse on the wrong source sha
 - **When to flip:** An integer conversion transported through floating registers is printed through inverse float/integer storage unions. Locked types and names remain authoritative; observable floating storage writes, clobbers and later floating uses are retained. Turn off to restore mixed storage-variable recovery.
 - **Where / provenance:** P6/variable-merging · kuna · transform · kuna-fputruncviews
 - **Example:** `option fputruncviews off`
+
+### `goboundscheck` -- on | off, default `off` (destructive opt-in)
+
+- **Symptoms:** Go slice access guarded by a branch to runtime.panicBounds or runtime.panicIndex; implicit bounds guards inflate recovered CFGs.
+- **What it does:** Recover Go implicit slice/array bounds guards by removing a conditional edge to a diverging runtime bounds-panic handler; leaves the guarded access intact.
+- **When to flip:** Opt in for source-level Go structure. The failure arm must contain exactly one compiler runtime bounds call and no stores. This drops explicit panic behavior from C output and can erase arguments used only by a guard. Keep off when auditing bounds checks. Names must be recovered; stripped runtime matching is not implemented.
+- **Where / provenance:** P7/edge-virtualization · kuna · opt-in-tool · declearn-go-bounds
+- **Example:** `option goboundscheck on`
 
 ## Analysis & loader passes
 

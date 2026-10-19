@@ -1,0 +1,46 @@
+<decompilertest>
+<binaryimage arch="x86:LE:64:default:gcc">
+<bytechunk space="ram" offset="0x100000" readonly="true">4839d673068b04b7ffc0c3e8f00f0000cc</bytechunk>
+<symbol space="ram" offset="0x100000" name="pick"/>
+<bytechunk space="ram" offset="0x100100" readonly="true">4839d673068b04b7ffc0c3c70701000000e8ea0e0000cc</bytechunk>
+<symbol space="ram" offset="0x100100" name="store_pick"/>
+<bytechunk space="ram" offset="0x100200" readonly="true">4839d673068b04b7ffc0c3e8f01d0000e8eb0d0000cc</bytechunk>
+<symbol space="ram" offset="0x100200" name="extra_pick"/>
+<bytechunk space="ram" offset="0x100300" readonly="true">4839d673068b04b7ffc0c3e8f02c0000cc</bytechunk>
+<symbol space="ram" offset="0x100300" name="custom_pick"/>
+<symbol space="ram" offset="0x101000" name="runtime.panicBounds"/>
+<symbol space="ram" offset="0x102000" name="sideeffect"/>
+<symbol space="ram" offset="0x103000" name="application.panicBounds"/>
+<bytechunk space="ram" offset="0x100400" readonly="true">4885d274068b04b7ffc0c3e8f00b0000cc</bytechunk>
+<symbol space="ram" offset="0x100400" name="zero_pick"/>
+</binaryimage>
+<script>
+<com>option goboundscheck off</com>
+<com>lo fu pick</com>
+<com>decompile</com>
+<com>print C</com>
+<com>option goboundscheck on</com>
+<com>lo fu pick</com>
+<com>decompile</com>
+<com>print C</com>
+<com>option goboundscheck on</com>
+<com>lo fu store_pick</com>
+<com>decompile</com>
+<com>print C</com>
+<com>option goboundscheck on</com>
+<com>lo fu extra_pick</com>
+<com>decompile</com>
+<com>print C</com>
+<com>option goboundscheck on</com>
+<com>lo fu custom_pick</com>
+<com>decompile</com>
+<com>print C</com>
+<com>option goboundscheck off</com><com>lo fu zero_pick</com><com>decompile</com><com>print C</com>
+<com>option goboundscheck on</com><com>decompile</com><com>print C</com>
+<com>quit</com>
+</script>
+<stringmatch name="go guard removed only for side-effect-free implicit panic" min="5" max="5">if \(</stringmatch>
+<stringmatch name="go runtime call remains in baseline and both side-effecting handlers" min="4" max="4">runtime.panicBounds\(</stringmatch>
+<stringmatch name="user side effect retained" min="1" max="1">sideeffect\(</stringmatch>
+<stringmatch name="application panic retained" min="1" max="1">application.panicBounds\(</stringmatch>
+</decompilertest>

@@ -1337,6 +1337,8 @@ pub struct Architecture {
     /// (option `securitycheck`, DIV-82 default-on; SEFCOM Oxidizer's
     /// `SecurityCheckRemover`).  Structurally inert on a C binary.
     pub strip_security_check: bool,
+    /// Opt-in Go implicit bounds-guard recovery.
+    pub strip_go_bounds_check: bool,
     /// (kuna) Flip negated-guard if/else branches for linearity: when an
     /// `if (x == 0) {A} else {B}` (equality-to-zero / negated guard) can be flipped
     /// in place, rewrite it to the positive `if (x) {B} else {A}` so the common
@@ -2992,6 +2994,7 @@ impl Architecture {
             hide_shadow: false, // (kuna) option hideshadow; reset_defaults sets the shipped default (on)
             strip_stack_guard: false,
             strip_msvc_stack_guard: false,
+            strip_go_bounds_check: false,
             strip_security_check: false,
             branch_flip: false,
             name_style_angr: false,
@@ -4231,6 +4234,7 @@ impl Architecture {
         ctx.hide_shadow = self.hide_shadow; // hideshadow
         ctx.strip_stack_guard = self.strip_stack_guard; // stackguard
         ctx.strip_msvc_stack_guard = self.strip_msvc_stack_guard; // msvcstackguard
+        ctx.strip_go_bounds_check = self.strip_go_bounds_check;
         ctx.strip_security_check = self.strip_security_check; // securitycheck
         ctx.branch_flip = self.branch_flip; // branchflip (negated-guard branch flipping)
         // (kuna) GH-9203 DIV-3: carry the loop-block COPY-placement gate so the
