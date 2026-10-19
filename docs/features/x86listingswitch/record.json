@@ -1,0 +1,57 @@
+{
+  "slug": "x86listingswitch",
+  "opportunity": "issue-299::i386-discovery-switch-coverage",
+  "test_name": "x86listingswitch-four-cases-and-adjacent-callback",
+  "binary": "decompiler/crates/kuna-analysis/tests/fixtures/switchtable_i386",
+  "selector": "dispatch",
+  "func_addr": "0x100000",
+  "option": "x86listingswitch",
+  "flag": "analysis_x86listingswitch",
+  "element_id": null,
+  "phase": "P1",
+  "tier": "analysis",
+  "change_kind": "new-analysis",
+  "source_decompiler": "kuna",
+  "inspiration": "Existing bounded switch reader and a demonstrated Listing/xrefs coverage difference",
+  "issue": 299,
+  "proposal": true,
+  "implementation_status": "not-implemented",
+  "human_approval": "pending",
+  "default_on": false,
+  "ablation_changed": null,
+  "parity": null,
+  "speed": null,
+  "base_commit": "5fe62be4073e713d049425742bbc7c721efe04cf",
+  "base_tree": "d5fb1cb37cb66547e2c368f8cf328b99e7a9e83c",
+  "spec_chapter": "docs/spec/01-program-prep.md",
+  "measurements": {
+    "kind": "before-only-native-api-and-cli",
+    "engine_base_commit": "5fe62be4073e713d049425742bbc7c721efe04cf",
+    "engine_note": "Both witnesses re-run on the actual base using an own release build of its exact d5fb1cb source tree",
+    "listing_instructions": 11,
+    "xrefs_instructions": 19,
+    "listing_table_cases_decoded": 0,
+    "xrefs_table_cases_reached": 4,
+    "adjacent_callback_false_fifth_edge": "0x100009 -> 0x100042",
+    "measured_aif_improvement": null,
+    "historical_unresolved_jump_associations": {
+      "wine": 466,
+      "mingw": 49,
+      "note": "Association in the preserved older audit, not a predicted or newly measured improvement"
+    }
+  },
+  "original_issue_acceptance": {
+    "original_private_pe_available": false,
+    "exact_crackme_and_twin_available": false,
+    "closure_claim": false
+  },
+  "decisions": [
+    "One i386 absolute-table discovery feature; no ARM conditional-return or x86-64 delta-table expansion.",
+    "Reject an unbounded cases=None integration: a four-case table followed by a callback word already produces a false fifth xrefs edge.",
+    "Require the range proof to constrain the actual table index at its machine width, prevent guard bypass, clobbers and unproved wrap, and preserve true function entries.",
+    "Instruction membership never becomes a min/max case span: preserve independent entries and undefined gaps between case blocks.",
+    "Resolve missing predecessor evidence deterministically across serial, parallel, and resumed walks.",
+    "Default-off development; any default-on recommendation requires fresh recall, parity, and speed evidence.",
+    "This proposal neither implements a fix nor satisfies the original #299 crackme acceptance criterion."
+  ]
+}
