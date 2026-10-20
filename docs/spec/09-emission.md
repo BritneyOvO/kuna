@@ -190,6 +190,20 @@ visible with cosmetic cast suppression. Rust uses the corresponding unsigned
 word casts with `from_bits` or `to_bits`. Other pointer widths and addressable
 unit sizes do not enter this path.
 
+The x87 integer conversions (`x87_float_to_int16/32/64`, chapter 02) produce
+signed integer bits of their own width (`coreaction_infertypes.rs
+(output_type_local)`), even when the memory they store to is later read as a
+float. Without that type an unknown output adopted the float reader's type and
+the store printed as an implicit numeric conversion: `*(float *)&storage[4] =
+x87_float_to_int32(..)` wrote the float `1.0f` where `FISTP` writes the word
+`1`. When such a result lands in a same-width float output, `cast_output`
+routes it through an integer temporary (`coreaction_casts.rs
+(Funcdata::cast_narrowed_call)`) so the move prints as the union
+reinterpretation above. A byte-array global's merged high type can be an
+unresolved aggregate while the store prints a scalar float view; for a
+float-typed `CAST` output, `storage_transfer` then judges by the output's own
+type instead of that aggregate, keeping the reinterpretation.
+
 A low-end integer `SUBPIECE` of a named 32- or 64-bit float similarly reads
 storage bits before narrowing (`kuna_bitcast.rs (truncated_float_storage)`).
 The selected storage view or declared scalar member type governs this decision,
@@ -326,6 +340,22 @@ warnstyle banner` restores upstream Ghidra's full
 `tests/stages/kuna-cnorm-warnstyle.xml`.
 
 ## 9.1 Casts
+
+An equal-width `CAST` involving a complete struct or union transfers its object
+representation in C (`kuna_aggregatecast.rs`). Emission uses a union compound
+literal with the actual declared source and destination types, evaluating the
+source once. Both types and both varnodes must have the same positive size;
+field accesses use their field type. Numeric floating-point conversion opcodes,
+incomplete records, arrays, and unequal widths are excluded. Recursive layout
+checks exclude padding, bitfields, and unions with shorter members; aggregate-typed
+constant inputs are also excluded.
+The operation's input-facing or definition-facing type must itself be an
+aggregate; a scalar access backed by an aggregate stack declaration does not
+establish a whole-object transfer. The destination is the type the printed
+destination has: the declared variable or field type when the CAST's output is an
+explicit variable, else the definition-facing type of the implied value. When an
+explicit scalar variable receives a scalar source the transfer is not an aggregate
+one and the scalar bit-transfer rules apply instead.
 
 **The pass.** `ActionSetCasts` (registry row P9/`cast-policy`, group `casts`)
 is scheduled near the very end of the pass tree — after `ActionNameVars` and
@@ -3646,7 +3676,14 @@ value's own scalar type of that width, such as a float stored in half of a
 eight-byte access crossing byte elements or covering the whole array. Floating
 transfers to and from that storage reinterpret bits rather than numerically
 converting the value or attempting an array cast. This lookup uses the exact
-global container and offset. A `FLOAT_FLOAT2FLOAT` that writes such storage
+global container and offset. When the type this lookup or the merged variable
+declares for a transfer's input is unknown or a partial aggregate, as for a
+value merged into a byte-array backing, it does not say whether the bits are a
+pointer or a float; a pointer or float read-facing type of the input decides
+instead (`kuna_bitcast.rs (storage_transfer)`). A pointer stored through
+`*(void **)&storage[8]` and moved into a `double` therefore passes through the
+unsigned word of its width and is reinterpreted, rather than printing the
+invalid `(double)` conversion of a pointer. A `FLOAT_FLOAT2FLOAT` that writes such storage
 directly keeps its numeric precision conversion, cast to the float of its output
 width rather than to the unknown type of the storage, because partial access
 prints that destination as a float.
@@ -3671,3 +3708,34 @@ Format-specific call arities are not declarations of the callee. When a call
 has format-derived arguments, project declarations restore its parked formal
 variadic signature. Call-only type roots are gathered only for project headers;
 ordinary per-function type inventories retain their original scope.
+
+Automatically admitted `localstackviews` backings use the same physical-version,
+byte-projection and mutable-read timing checks as explicit `stackviews`.
+Native write preservation is established before mapping; emission does not
+resurrect hidden arithmetic or mark reconstructed COPYs as physical stores.
+A surviving native persistent publication supplies its exact locked pointer
+contract to the existing typed-member address binding, so a shared union address
+is published as the declared pointee address at the original operation.
+
+Project C exports use the exact global-scope function symbol's display name
+for a successful definition and its header prototype when both spellings are
+plain C identifiers (`decompiler/crates/kuna-console/src/kuna_projectfunctionnames.rs`).
+This aligns definitions with calls when debug information names a function
+differently from its linker symbol. Analysis, selector aliases, and standalone
+output retain their existing names. The original display is restored after
+rendering. Namespaced and nonidentifier spellings are not guessed. A separate
+optional emitted C name travels through worker records and survives stream
+compaction, so the header checks every successful prototype record, including
+streamed bodies whose text was released. Multiple entries claiming one C name
+(duplicate static functions from separate translation units, or a PLT stub
+beside the definition it reaches), or a function conflicting with a data or
+typedef declaration, are listed in address-only header comments. They are not
+fatal: the export still writes every artifact and keeps its exit status, and a
+typedef collision keeps the commented-out prototype so the header itself still
+parses. Source selection names and alias metadata retain their existing meaning.
+
+Project C emission reserves global function names before rendering local symbols.
+A colliding parameter or local receives a unique local spelling; parameter storage,
+types, and lock flags are preserved, and the prototype and body use the same name.
+This prevents a source-level parameter name from shadowing a function's emitted
+linkage identifier. The change is local to the rendered function.

@@ -812,6 +812,9 @@ pub struct ArchContext {
     /// (kuna) CALLOTHER ids of the x87 integer conversions read by
     /// [`RuleX87Truncate`](crate::kuna_x87truncate::RuleX87Truncate).
     pub x87_float_to_int_userops: Vec<kuna_base::types::uint4>,
+    /// SLEIGH FIST/FISTP conversion userops and their signed output widths.
+    /// Resolved by name once when building the architecture snapshot.
+    pub x87_integer_userops: Vec<(kuna_base::types::uint4, int4)>,
     /// (kuna) GH-1276/8777: fold flag-modelled comparison idioms (C++
     /// `fold_flag_compare`, DIV-3 default-on).  Read by
     /// [`RuleBoolSignLess`](crate::kuna_flagcompare::RuleBoolSignLess) /
@@ -1108,6 +1111,9 @@ pub struct ArchContext {
     /// (kuna) a call reads the narrow value its callee returns zero-extended
     /// (`narrowret`). Read by [`crate::kuna_narrowret`].
     pub narrow_ret: bool,
+    /// (kuna) also narrow a register-local web of sign extensions
+    /// (`regsigned`). Read by [`crate::kuna_regnarrow`].
+    pub narrow_signed: bool,
     /// (kuna) at a CALL SITE, let an unreferenced argument register whose next
     /// slot is on the stack end the argument list (`stackarggap`).  Read by
     /// `ActionActiveParam`, which stamps it onto the
@@ -1225,6 +1231,8 @@ pub struct ArchContext {
     pub stack_alias_deadstore: bool,
     /// Operation-specific typed views over shared physical frame storage.
     pub stack_views: bool,
+    /// Bounded native local storage and declared pointer views.
+    pub local_stack_views: bool,
     /// (kuna `libcnames`) Name locals from the library calls they meet.
     /// See [`crate::kuna_libcnames`].
     pub libc_names: bool,
@@ -1808,6 +1816,7 @@ impl ArchContext {
             drop_call_push: false,        // callpush (the ArchSeam carries the real default)
             simd_shuffle_userops: Vec::new(),
             x87_float_to_int_userops: Vec::new(),
+            x87_integer_userops: Vec::new(),
             fold_flag_compare: false,    // GH-1276/8777 flagcompare
             add_carry_chain: false,      // GH-8913 addcarrychain
             ov_less_simplify: false,     // GH-7190 ovlesssimplify
@@ -1906,6 +1915,7 @@ impl ArchContext {
             narrow_args: true,
             narrow_locals: true,
             narrow_ret: true,
+            narrow_signed: false,
             stack_arg_gap: true,         // stackarggap (DIV-140 default-on)
             vararg_stack_args: true,     // varargstackargs (DIV-101 default-on)
             vararg_forward: true,        // varargforward (default-on)
@@ -1927,6 +1937,7 @@ impl ArchContext {
             array_extent: 0,             // arrayextent (Architecture::reset_defaults sets the shipped default)
             array_size: 0,               // arraysize (Architecture::reset_defaults sets the shipped default)
             stack_alias_deadstore: false,
+            local_stack_views: true,
             stack_views: false, // stackviews (opt-in)
             libc_names: false, // libcnames (opt-in)
             guarded_read_trim: false,
