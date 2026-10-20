@@ -886,6 +886,15 @@ pub struct Architecture {
     /// states the VFP calling convention (option `armfloatargs`).
     /// See [`crate::p4_calls::kuna_armfloatargs`].
     pub arm_float_args: bool,
+    /// (kuna) The default models `armfloatreturn` has widened, with the model
+    /// each was built from and whether it skips back-fill holes, so every
+    /// function reuses one instead of rebuilding it.
+    pub arm_widened_models: std::cell::RefCell<Vec<(Rc<crate::fspec::ProtoModel>, bool, Rc<crate::fspec::ProtoModel>)>>,
+    /// (kuna `armfloatreturn`) Library prototypes declaring a `float` or `double`
+    /// that an ARM image's load held back, by name or by entry address, until a
+    /// decompile shows whether the option applies. See
+    /// [`crate::p4_calls::kuna_armfloatreturn::park_float_library_prototypes`].
+    pub arm_float_library_prototypes: Vec<(Option<Address>, crate::fspec::PrototypePieces)>,
     /// (kuna) Extend a narrow integer argument or return value as the ABI states
     /// (option `narrowext`).  See [`crate::p4_calls::kuna_narrowext`].
     pub narrow_ext: crate::kuna_narrowext::NarrowExtMode,
@@ -2924,6 +2933,8 @@ impl Architecture {
             msvc_builders: Rc::new(Default::default()),
             arg_clobber: true, // (kuna) option argclobber; reset_defaults sets the shipped default
             arm_float_args: false, // (kuna) option armfloatargs
+            arm_widened_models: std::cell::RefCell::new(Vec::new()),
+            arm_float_library_prototypes: Vec::new(),
             arm_float_return: false, // (kuna) option armfloatreturn
             narrow_ext: crate::kuna_narrowext::NarrowExtMode::Off, // (kuna) option narrowext; reset_defaults sets the shipped default
             pass_through: true, // (kuna) option passthrough; reset_defaults sets the shipped default
@@ -3418,9 +3429,9 @@ impl Architecture {
         self.bool_byte = true; // (kuna) option boolbyte default-on: measured 0/675 datatest assertions moved, stages PARITY OK, decbench type_match improved with none worse, speed within budget; docs/features/boolbyte/record.json carries the evidence
         self.partial_concat = true;
         self.arm_constant_shift = false;
-        self.arm_float_args = false; // (kuna) option armfloatargs default-off: scalar VFP input recovery is measured only on the feature's own corpus and one firmware image
+        self.arm_float_args = false; // (kuna) option armfloatargs: default-OFF in the catalog; ON in the `aggressive` preset with armfloatreturn, which `auto` selects under 500 KiB; inert unless the ELF states the VFP procedure-call standard
         self.narrow_ext = crate::kuna_narrowext::NarrowExtMode::Abi; // (kuna) option narrowext default `abi`: a narrow integer argument or return value is extended as the RISC-V and LoongArch procedure-call standards state
-        self.arm_float_return = false; // (kuna) option armfloatreturn default-off: the float/double width guess on a partial d0 write and the widened model are unmeasured beyond the feature's own corpus
+        self.arm_float_return = false; // (kuna) option armfloatreturn: default-OFF in the catalog; ON in the `aggressive` preset, which `auto` selects under 500 KiB; inert unless the ELF states the VFP procedure-call standard
         self.pass_through = true; // (kuna) option passthrough default-on: over 574 slices in 25 projects (the 444-slice decbench corpus plus 130 slices of 17 disjoint projects) 4,107 of 4,346 gained parameters are DWARF-confirmed, NONE contradicted, 239 thunks DWARF does not describe, 0 parameters and 0 call arguments lost; the return arm is 5,458 of 5,615 confirmed, its 157 misses all the undecidable `void` tail-call wrapper; docs/features/passthrough/dwarf-confirmation.md
         self.mixed_tail_ret = false; // (kuna) option mixedtailret default-off: a void guard that leaves the value it tested in the return register beside a tail call compiles to the same bytes; see the phases.toml row
         self.arg_clobber = true; // (kuna) option argclobber default-on: the drop now needs the callee's own RECOVERED prototype to say the register is free (`protoorder` parks it), so it is inert wherever no callee was decompiled first; 0/675 datatest assertions, PARITY OK on stages, no scored type_match change, measured in docs/features/argclobber/record.json
@@ -3979,8 +3990,19 @@ impl Architecture {
         // `evalfp_current`) so the proto-recovery actions can set the function's
         // model and run output recovery against the real param lists.
         // (kuna) `armfloatreturn` widens the default model with the d-registers.
-        ctx.arm_float_return = crate::kuna_armfloatreturn::applies(self);
-        ctx.arm_float_args = crate::kuna_armfloatargs::applies(self);
+        let helper = crate::kuna_armfloatreturn::applies(self)
+            && entry
+                .and_then(|e| self.symboltab.function_display_name_across_scopes(e))
+                .is_some_and(|name| crate::kuna_armfloatreturn::base_pcs_helper(&name));
+        ctx.arm_float_return = crate::kuna_armfloatreturn::applies(self) && !helper;
+        ctx.arm_float_args = crate::kuna_armfloatargs::applies(self) && !helper;
+        ctx.arm_base_model = self
+            .defaultfp
+            .clone()
+            .filter(|_| crate::kuna_armfloatreturn::applies(self));
+        ctx.arm_helper_model = crate::kuna_armfloatreturn::applies(self)
+            .then(|| crate::kuna_typedcallabi::soft_model(self, Some(false)))
+            .flatten();
         ctx.float_arg_registers = crate::kuna_typedcallabi::image_evidence(self);
         ctx.soft_float_model = crate::kuna_typedcallabi::soft_model(self, ctx.float_arg_registers);
         ctx.soft_float_declarations = ctx
@@ -3993,7 +4015,14 @@ impl Architecture {
         ctx.narrow_ext = crate::kuna_narrowext::rules(self);
         ctx.defaultfp = self.defaultfp.as_ref().map(|model| {
             if ctx.arm_float_return {
-                crate::kuna_armfloatreturn::model(model, ctx.manage(), ctx.arm_float_args)
+                let backfill = ctx.arm_float_args;
+                let mut built = self.arm_widened_models.borrow_mut();
+                if let Some((_, _, widened)) = built.iter().find(|(from, b, _)| Rc::ptr_eq(from, model) && *b == backfill) {
+                    return widened.clone();
+                }
+                let widened = crate::kuna_armfloatreturn::model(model, ctx.manage(), backfill);
+                built.push((model.clone(), backfill, widened.clone()));
+                widened
             } else {
                 model.clone()
             }

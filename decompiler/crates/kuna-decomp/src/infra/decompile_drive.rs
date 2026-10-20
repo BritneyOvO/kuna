@@ -752,6 +752,7 @@ pub fn build_and_follow_flow_with_override_and_protos(
     flow_overrides: &[(Address, kuna_base::types::uint4)],
     proto_overrides: &[(Address, crate::fspec::PrototypePieces)],
 ) -> KunaResult<Funcdata> {
+    crate::kuna_armfloatreturn::park_float_library_prototypes(arch);
     let mut fd = arch.new_funcdata(name, entry, size)?;
     for (addr, ty) in flow_overrides {
         fd.get_override_mut().insert_flow_override(addr.clone(), *ty);
@@ -1236,6 +1237,7 @@ pub fn decompile_func_full_with_objects(
     prefollowed: Option<Funcdata>,
     object_assertions: &[crate::kuna_stackobjectasserts::ObjectAssertion],
 ) -> KunaResult<Funcdata> {
+    crate::kuna_armfloatreturn::park_float_library_prototypes(arch);
     // (kuna decompile-all watchdog) Arm the per-function deadline from the
     // driver-set budget (`kuna decompile-all --max-fn-seconds N` sets
     // `kuna_fn_budget`, `decomp_dbg --max-fn-seconds N` the process default;
@@ -1359,6 +1361,7 @@ pub fn decompile_func_full_with_objects(
             let declared_model = staged_proto_model
                 .clone()
                 .or_else(|| fd.get_arch().callee_proto_model(&entry_addr))
+                .or_else(|| crate::kuna_armfloatreturn::declared_helper_model(fd.get_arch(), &pieces.name))
                 .or_else(|| crate::kuna_typedcallabi::undeclared_model(fd.get_arch(), pieces));
             fd.apply_locked_prototype_with_model(pieces, declared_model)?;
         } else if let Some(rt) = elfmain {
