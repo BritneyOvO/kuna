@@ -575,3 +575,6 @@ mod x86_bound_checks;
 
 #[path = "floating_stack_bytes.rs"]
 mod floating_stack_bytes;
+
+#[path = "aggregate_interior_address.rs"]
+mod aggregate_interior_address;
