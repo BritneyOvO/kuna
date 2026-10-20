@@ -581,3 +581,6 @@ mod floating_stack_bytes;
 
 #[path = "aggregate_interior_address.rs"]
 mod aggregate_interior_address;
+
+#[path = "float_integer_truncation.rs"]
+mod float_integer_truncation;
