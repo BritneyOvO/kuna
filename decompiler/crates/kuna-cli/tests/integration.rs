@@ -544,3 +544,6 @@ mod parameter_spill_reuse;
 
 #[path = "declared_callee_pop.rs"]
 mod declared_callee_pop;
+
+#[path = "project_function_linkage.rs"]
+mod project_function_linkage;
