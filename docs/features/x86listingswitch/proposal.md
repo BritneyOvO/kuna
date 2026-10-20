@@ -1,8 +1,7 @@
 # Proposal: bounded i386 switch successors in the discovery Listing
 
-Human go/no-go requested before implementation, as required by standing
-requirement 5 and §4 of `docs/improvement-pipeline.md`. This draft contains only
-analysis, design, and a partial record. It changes no runtime behavior.
+Approved and implemented as designed (default off). The measured results are
+in `record.json`; the normative description is in `docs/spec/01-program-prep.md`.
 
 ## Scope
 

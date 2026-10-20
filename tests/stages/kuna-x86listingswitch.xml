@@ -1,0 +1,77 @@
+<decompilertest>
+<binaryimage arch="x86:LE:64:default:gcc">
+<!--
+    kuna issue testcase: the Listing walk adds the case bodies of a provably
+    bounded i386 absolute-table switch (`option x86listingswitch on|off`,
+    default-OFF).
+
+    Issue:      kuna GH-299 - aif plants mid-function entries; on i386 the
+                discovery walk stops at every jmp [idx*4 + table], so a case
+                body that opens with a prologue becomes a sub_ in the middle of
+                its dispatcher.
+    Stage:      P1 code/data partition - post-walk switch reconciliation
+                (`listing/kuna_x86listingswitch.rs`).
+    P0 assert:  `option x86listingswitch on|off`.
+
+    The XML wrapper only provides the harness architecture.  Every pass clears
+    it and loads `x86listingswitch_i386` (source `x86listingswitch_i386.s`
+    beside it): a stripped i386 ELF whose `_start` calls 22 leaves that open
+    with `push esi; push ebx`, then `dispatch` at 0x10016c (`cmp eax,4; ja
+    default; jmp [eax*4 + 0x101000]`, five cases), `sdispatch` at 0x100206
+    (the same shape behind a signed `jg`, three cases) and `lone_called` at
+    0x100190.  Each case of `dispatch` opens with the leaves' prologue, calls
+    its own callee and returns; the cases sit around `lone_called` and around
+    `lone_free` at 0x1001b0 (preceded by 12 bytes of int3 fill), which nothing
+    references.  The word after the five-entry table points to `independent`
+    at 0x10023a, which only that word names.
+
+    Pass 1 (`mode aggressive`, shipped default) reproduces the bug: the gap
+    walk lists the five cases (0x10017c, 0x100186, 0x10019a, 0x1001ba,
+    0x1001c4) as functions, and misses two of their callees (0x1001de,
+    0x1001f2).
+    Pass 2 (`mode aggressive`, `option x86listingswitch on`) proves the bound
+    of five, decodes the cases as the dispatcher's code and lists none of them;
+    the five callees are found through the calls in the cases.  In both passes
+    the dispatcher decompiles to the same five-case switch, `lone_called`,
+    `lone_free` and `independent` stay functions (the sixth table word is not
+    read), and the signed dispatch's cases stay listed (a signed bound reads
+    nothing).
+-->
+<bytechunk space="ram" offset="0x100000" readonly="true">
+c3
+</bytechunk>
+<symbol space="ram" offset="0x100000" name="harness_stub"/>
+</binaryimage>
+<script>
+  <com>clear architecture</com>
+  <com>load file decompiler/crates/kuna-analysis/tests/fixtures/x86listingswitch_i386</com>
+  <com>mode aggressive</com>
+  <com>read symbols</com>
+  <com>functions</com>
+  <com>load function sub_10016c</com>
+  <com>decompile</com>
+  <com>print C</com>
+  <com>clear architecture</com>
+  <com>load file decompiler/crates/kuna-analysis/tests/fixtures/x86listingswitch_i386</com>
+  <com>mode aggressive</com>
+  <com>option x86listingswitch on</com>
+  <com>read symbols</com>
+  <com>functions</com>
+  <com>load function sub_10016c</com>
+  <com>decompile</com>
+  <com>print C</com>
+  <com>phase catalog x86listingswitch</com>
+  <com>quit</com>
+</script>
+<stringmatch name="KUNA-X86LISTINGSWITCH #1: the dispatcher is a function in both passes" min="2" max="2">0x10016c sub_10016c</stringmatch>
+<stringmatch name="KUNA-X86LISTINGSWITCH #2: the five case bodies are functions only with the option off" min="5" max="5">0x10017c sub_10017c|0x100186 sub_100186|0x10019a sub_10019a|0x1001ba sub_1001ba|0x1001c4 sub_1001c4</stringmatch>
+<stringmatch name="KUNA-X86LISTINGSWITCH #3: two callees reached only from cases are found only with the option on" min="2" max="2">0x1001de sub_1001de|0x1001f2 sub_1001f2</stringmatch>
+<stringmatch name="KUNA-X86LISTINGSWITCH #4: the other three callees are functions in both passes" min="6" max="6">0x1001d4 sub_1001d4|0x1001e8 sub_1001e8|0x1001fc sub_1001fc</stringmatch>
+<stringmatch name="KUNA-X86LISTINGSWITCH #5: the called function between case blocks keeps its entry" min="2" max="2">0x100190 sub_100190</stringmatch>
+<stringmatch name="KUNA-X86LISTINGSWITCH #6: the unreferenced function between case blocks stays discoverable" min="2" max="2">0x1001b0 sub_1001b0</stringmatch>
+<stringmatch name="KUNA-X86LISTINGSWITCH #7: the word after the table is not a sixth case" min="2" max="2">0x10023a sub_10023a</stringmatch>
+<stringmatch name="KUNA-X86LISTINGSWITCH #8: a signed bound reads nothing, so its cases stay listed" min="6" max="6">0x100216 sub_100216|0x100220 sub_100220|0x10022a sub_10022a</stringmatch>
+<stringmatch name="KUNA-X86LISTINGSWITCH #9: the dispatcher decompiles to the same five-case switch in both passes" min="2" max="2">^    case 4:$</stringmatch>
+<stringmatch name="KUNA-X86LISTINGSWITCH #11: its last case calls the last callee in both passes" min="2" max="2">return sub_1001fc\(\);</stringmatch>
+<stringmatch name="KUNA-X86LISTINGSWITCH #10: the catalog documents it as a default-off P1 code/data-partition option" min="1" max="1">"option": "x86listingswitch", "values": \["on", "off"\], "default": "off", "current": "on", "destructive_as_default": false, "phase": "P1"</stringmatch>
+</decompilertest>

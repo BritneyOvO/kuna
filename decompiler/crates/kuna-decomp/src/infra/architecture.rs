@@ -1716,6 +1716,10 @@ pub struct Architecture {
     /// `n + 1` offsets read, and each case body is walked as the dispatcher's own
     /// code. ARM images only; inert without `--option listing on`.
     pub analysis_thumbswitch: bool,
+    /// (kuna, GH-299) Add the case bodies of a provably bounded i386
+    /// `jmp [idx*4 + table]` switch to the discovery Listing after the ordinary
+    /// walk (`x86listingswitch`); default **off**. Linked i386 ELF and PE only.
+    pub analysis_x86listingswitch: bool,
     /// (kuna) How far the reference walk follows a register-chain jump-table
     /// dispatch (`switchreach`); default **on**. On, it reads gcc's `-O0`
     /// unscaled-index chain, a base hoisted above calls into a callee-saved
@@ -3068,6 +3072,7 @@ impl Architecture {
             analysis_declaredlibcproto: false,
             analysis_unmappedentry: false,
             analysis_thumbswitch: true,
+            analysis_x86listingswitch: false,
             analysis_switchreach: true,
             analysis_thunkentry: false,
             analysis_addrtakenentry: false,
@@ -3469,6 +3474,8 @@ impl Architecture {
         self.analysis_unmappedentry = true;
         // (kuna, GH-299) Thumb tbb/tbh switch-table read -- default-ON (ARM only).
         self.analysis_thumbswitch = true;
+        // (kuna, GH-299) Bounded i386 switch successors in the Listing -- default-OFF.
+        self.analysis_x86listingswitch = false;
         // (kuna) Register-chain jump-table reach in the reference walk -- default-ON.
         self.analysis_switchreach = true;
         // (kuna) Jump-thunk target function entries -- default-ON (x86 only).

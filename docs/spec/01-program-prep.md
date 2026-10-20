@@ -6241,6 +6241,87 @@ takes longer where tables are read (`kuna functions` about 8% on betaflight and
 that libc), while a whole-binary run gets faster because no case body is
 decompiled as a function of its own. It is ARM-only and needs a walk, so it is inert without `--option listing on`.
 
+(kuna, GH-299) **i386 absolute tables** (`x86listingswitch`, default-off;
+`decompiler/crates/kuna-analysis/src/listing/kuna_x86listingswitch.rs`) are the
+x86 counterpart for the discovery walk. MSVC and gcc/clang without PIC lower an
+i386 switch to `cmp idx,c; ja default; jmp dword ptr [idx*4 + table]`, and the
+walk stopped at that jump, so the case bodies stayed undecoded and the gap walk
+listed any case that opens with the program's common prologue as a function.
+The reference walk's direct-table arm cannot simply be reused: it reads
+consecutive read-only code pointers with no case count, so a callback array
+laid out after a four-entry table reads as a fifth case, and a fifth successor
+taken from it would absorb a genuine function into the dispatcher. The rule here
+reads a table only behind a bound it proves, and it runs after the ordinary walk
+(serial or parallel) has finished, over that reconciled partition, so no answer
+depends on which lane decoded what first. For each computed jump with no static
+target, in address order:
+
+1. The jump's own p-code must be `BRANCHIND (LOAD ram (table + idx * 4))` over
+   4-byte values, with `idx` a 4-byte register read at the instruction's start
+   and `table` a constant; a jump through a single slot (an import veneer), a
+   scale other than 4, a register base, or any register write in the jump
+   refuses it.
+2. Stepping back over fall-through predecessors, at most eight instructions in
+   all, the nearest conditional branch is the guard and the nearest instruction
+   above it that writes a flag the guard reads is the comparison. The guard's
+   taken target must lie outside the block, the guard's condition must be
+   computed only from those flags by boolean and bitwise ops, and every such
+   flag must be defined in the comparison as an unsigned comparison
+   (`INT_LESS`, `INT_LESSEQUAL`, `INT_EQUAL`, `INT_NOTEQUAL`, directly or of
+   `idx - c`) of `idx` with a constant of `idx`'s width. A flag defined any
+   other way (the signed `SF`/`OF` of `jg`/`jl`) refuses the jump. Nothing in
+   the block may write any byte of `idx`, except one `movzx` between the guard
+   and the jump that zero-extends a narrower register into exactly `idx`; the
+   comparison must then be of that narrower register (gcc's `cmp al,5; ja;
+   movzx eax,al` for a `char` selector). Calls, user ops and other branches in
+   the block refuse it.
+3. The guard's condition is evaluated at every value where one of the
+   comparisons can change truth (each constant, its neighbours, the domain's
+   ends) and at one value inside each gap between them, which covers the whole
+   domain of the compared register. The values that fall through to the jump
+   must be exactly `0..n-1`, with `n` at least two; a lower bound alone or any
+   other set refuses it.
+4. No edge may enter the block below the comparison, other than each
+   instruction's fall-through from the one above it, and no function entry may
+   lie there: a bypass edge to the jump or to the guard refuses it.
+5. The first `min(n, jumptablemax)` words, with `table + 4 * count` not
+   wrapping 32 bits, must each be an aligned word of allocated, non-writable,
+   file-backed memory holding an address in the jump's executable section that
+   is not a function entry, does not lie inside the table, and does not land
+   inside an already decoded instruction. One invalid word refuses the whole
+   table rather than shortening it; repeated targets are kept once; no word past
+   that count is read.
+
+Admitted cases are walked as instruction roots with the ordinary successor
+rules (`walk::step`), into a candidate kept apart from the ordinary state; a
+call in a case claims its callee as any call does, but a case start is never a
+function entry itself. The proof is then re-run over the ordinary partition
+plus the candidate, for jumps not yet admitted, and the rounds repeat until one
+admits nothing, at most sixteen admission rounds. Every admitted proof is then
+re-checked against the final partition (a later round can reach a bypass edge
+or claim an entry inside a block). If the rounds do not settle, the candidate
+outgrows its 4M-instruction budget, or any proof no longer holds, the whole
+candidate is dropped and the ordinary Listing is returned unchanged; otherwise
+it is published once, before the gap walk reads it. A Listing that was extended
+is rebuilt from its seeds when it is resumed (`Listing::resume`), since code the
+new seeds reach can invalidate its proofs; a Listing it left alone resumes in
+place, and the reconciliation then runs on the resumed result. Only linked
+i386 ELF and PE images are read; every other target, a relocatable object, and
+the reference walk are unchanged.
+
+Scored against the symbol tables of 45 stripped i386 PEs (12 decbench images,
+17 Wine DLLs, 16 MinGW crackmes) in `--mode aggressive`, 348 of the 461
+table-form jumps the walk decodes are admitted, and none of their 3,688 cases
+lies outside the dispatcher's own symbol. True function starts go 34,365 to
+34,430 (78 gained, 13 lost) and mid-body entries 13,995 to 13,728 (332 gone,
+65 new gap-walk entries in other holes); with `aif` off, 187 true starts are
+gained and none lost. Of the 13 lost, eight are functions a case body reaches
+by a tail `jmp`, which the walk follows as same-function flow as it does any
+branch, two follow a call to a no-return function the walk does not know, and
+three are in one MinGW C++ image with no reference at all. That loss is why it
+stays default-off. Discovery time is unchanged within measurement noise.
+
+
 (kuna) The walk's decode set is global, so it cannot say how long one function
 is: code two entries share is decoded under whichever entry reached it first. A
 gcc `.cold` fragment sits below its parent and jumps back into the parent's body,

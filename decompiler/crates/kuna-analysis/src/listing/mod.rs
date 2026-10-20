@@ -55,6 +55,7 @@ mod kuna_ppclocalentry;
 mod kuna_switchtable;
 mod kuna_thumbswitch;
 mod kuna_a32switch;
+mod kuna_x86listingswitch;
 pub(crate) mod kuna_decodememo;
 mod kuna_unmappedentry;
 pub mod model;
@@ -131,6 +132,9 @@ pub struct Listing {
     /// (kuna `armfuncmode`) The extents painted A32 from function-symbol
     /// evidence (see [`crate::loader::kuna_armfuncmode`]); empty otherwise.
     a32_extents: Vec<(u64, u64)>,
+    /// (kuna `x86listingswitch`) Whether proven i386 switch cases were added
+    /// after the ordinary walk, which a resumed walk cannot extend in place.
+    x86_switches: bool,
 }
 
 impl Listing {
@@ -187,6 +191,7 @@ impl Listing {
             stack_callback_refs: Vec::new(),
             mode_runs: Vec::new(),
             a32_extents: Vec::new(),
+            x86_switches: false,
         }
     }
 
@@ -278,8 +283,12 @@ impl Listing {
     /// are kept and moved, not copied, so the walk decodes only what the new
     /// seeds reach; the result is the Listing a fresh build from `seeds` makes,
     /// because a decode at an address does not depend on who reached it first.
+    ///
+    /// A Listing that `x86listingswitch` extended is rebuilt from `seeds`
+    /// instead: its admitted proofs were checked against the partition they
+    /// were made on, and code the new seeds reach can invalidate them.
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn resume(
+    pub fn resume(
         self,
         file: &object::File,
         arch: &Architecture,
@@ -290,6 +299,10 @@ impl Listing {
         detail: ListingDetail,
         plan: &WalkPlan,
     ) -> Listing {
+        if self.x86_switches {
+            return Self::build_resuming(file, arch, translate, seeds, funcsym_seeds, seed_names, detail, plan,
+                None, None, None);
+        }
         let prior = walk::WalkState {
             insns: self.insns,
             refs: self.refs.into_edges(),
@@ -346,6 +359,7 @@ impl Listing {
                     stack_callback_refs: Vec::new(),
                     mode_runs: Vec::new(),
                     a32_extents: Vec::new(),
+                    x86_switches: false,
                 };
             }
         };
@@ -419,6 +433,23 @@ impl Listing {
             a32_tables.as_ref(),
             memo,
         );
+        let (st, x86_switches) = match kuna_x86listingswitch::SwitchTables::new(file, arch) {
+            Some(x86_tables) => {
+                let ctx = walk::StepCtx {
+                    translate,
+                    code_space: &code_space,
+                    exec_ranges: &exec_ranges,
+                    local_entries: &local_entries,
+                    policy: walk::WalkPolicy::from_arch(arch, want_stack_callbacks),
+                    detail,
+                    tables: tables.as_ref(),
+                    a32_tables: a32_tables.as_ref(),
+                    memo,
+                };
+                kuna_x86listingswitch::reconcile(&ctx, &x86_tables, st)
+            }
+            None => (st, false),
+        };
 
         let refs = kuna_compactrefs::ReferenceIndex::new(st.refs);
 
@@ -436,6 +467,7 @@ impl Listing {
                 .collect(),
             mode_runs: st.mode_runs,
             a32_extents: painter.a32_extents().to_vec(),
+            x86_switches,
         }
     }
 
@@ -508,6 +540,7 @@ impl Listing {
             stack_callback_refs: Vec::new(),
             mode_runs: Vec::new(),
             a32_extents: Vec::new(),
+            x86_switches: false,
         }
     }
 
@@ -527,6 +560,7 @@ impl Listing {
             stack_callback_refs: Vec::new(),
             mode_runs: Vec::new(),
             a32_extents: Vec::new(),
+            x86_switches: false,
         }
     }
 
@@ -547,6 +581,7 @@ impl Listing {
             stack_callback_refs,
             mode_runs: Vec::new(),
             a32_extents: Vec::new(),
+            x86_switches: false,
         }
     }
 
@@ -876,6 +911,7 @@ mod tests {
             stack_callback_refs: Vec::new(),
             mode_runs: Vec::new(),
             a32_extents: Vec::new(),
+            x86_switches: false,
         };
         let addrs = |start, end| {
             listing

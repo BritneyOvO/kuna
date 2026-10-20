@@ -1,6 +1,6 @@
 # x86listingswitch: the discovery walk leaves i386 switch cases undefined
 
-Status: proposal; no engine change has been implemented. This is a partial
+Status: implemented as the default-off `x86listingswitch` option. This is a partial
 underlying improvement for [#299](https://github.com/Noelo-Lab/kuna/issues/299),
 not a claim that its original acceptance bar is met.
 

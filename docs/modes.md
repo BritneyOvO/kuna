@@ -186,9 +186,16 @@ not, and the invariant test's `EXCLUDED_ON_PURPOSE` list is the authority:
   the preset would make a near-neutral judgment call the default output under
   500 KiB.
 
+- **`x86listingswitch`** — it adds the case bodies of a provably bounded i386
+  `jmp [idx*4 + table]` switch to the discovery Listing, which changes the
+  function inventory (and so the set of decompiled functions) of a stripped
+  i386 image. It is measured on its fixtures and an i386 entry sweep, but a
+  preset change needs a broader recall sweep first.
+
 These therefore stay manual per-run opt-ins (`--option v850indirectbranch on`,
 `--option dwarf_lines on`, `--option formatstring full`, `--option ifuncfpret on`,
-`--option msvcstrappend on`, `--option bejoin on`, `--option regsigned on`)
+`--option msvcstrappend on`, `--option bejoin on`, `--option regsigned on`,
+`--option x86listingswitch on`)
 even under `--mode aggressive`; a named `--option` still wins over the preset by
 last-write precedence. For `formatstring` only the `full` loop above is excluded:
 its `static` default reads the same format constants out of the image at load, so
