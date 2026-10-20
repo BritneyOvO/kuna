@@ -1,7 +1,7 @@
 {
   "data_footer": [
-    3141,
-    3141
+    3152,
+    3152
   ],
   "passing": [
     "data:64-bit logical shift retains unsigned destination",
@@ -958,7 +958,7 @@
     "data:KUNA-CATALOG #12: scalar ARM inputs are a default-off opt-in",
     "data:KUNA-CATALOG #13: validated A32 inventory frames are the default",
     "data:KUNA-CATALOG #14: full ARM frames are explicitly enabled",
-    "data:KUNA-CATALOG #15: 324 registry rows plus six individual queries",
+    "data:KUNA-CATALOG #15: 325 registry rows plus six individual queries",
     "data:KUNA-CATALOG #16: standard C byte-array rendering is explicitly opt-in",
     "data:KUNA-CATALOG #17: standard C byte-array rendering exposes its live state",
     "data:KUNA-CATALOG #18: bounded local views are default-on and live",
@@ -1054,6 +1054,17 @@
     "data:KUNA-WIDESTRINGS32 #4: int tables of character codes keep their names",
     "data:KUNA-WIDESTRINGS32 #5: on, clang, the literal after the switch table starts at its operand",
     "data:KUNA-WIDESTRINGS32 #6: on, clang, the indexed switch table keeps its address",
+    "data:KUNA-X86LISTINGSWITCH #10: the catalog documents it as a default-off P1 code/data-partition option",
+    "data:KUNA-X86LISTINGSWITCH #11: its last case calls the last callee in both passes",
+    "data:KUNA-X86LISTINGSWITCH #1: the dispatcher is a function in both passes",
+    "data:KUNA-X86LISTINGSWITCH #2: the five case bodies are functions only with the option off",
+    "data:KUNA-X86LISTINGSWITCH #3: two callees reached only from cases are found only with the option on",
+    "data:KUNA-X86LISTINGSWITCH #4: the other three callees are functions in both passes",
+    "data:KUNA-X86LISTINGSWITCH #5: the called function between case blocks keeps its entry",
+    "data:KUNA-X86LISTINGSWITCH #6: the unreferenced function between case blocks stays discoverable",
+    "data:KUNA-X86LISTINGSWITCH #7: the word after the table is not a sixth case",
+    "data:KUNA-X86LISTINGSWITCH #8: a signed bound reads nothing, so its cases stay listed",
+    "data:KUNA-X86LISTINGSWITCH #9: the dispatcher decompiles to the same five-case switch in both passes",
     "data:LIBCTYPES #10: glibc off, a MINTED stream shell has no members, so the refill body reads an offset",
     "data:LIBCTYPES #11: glibc on, the same two accesses are the published field",
     "data:LIBCTYPES #12: glibc off, a MINTED stat shell reads its size through a cast at an offset",
