@@ -252,7 +252,13 @@ access, has the scalar type of the member or truncating cast that path ends in
 when it is the side's width, the same walk that prints it, so a float stored to
 `store.real[2]` keeps its bits even when another incarnation merged into that
 global supplies an unsigned word type. That printed type decides the side before
-the unresolved-aggregate rules above and below. A partial struct or union is never taken as a side's C type;
+the unresolved-aggregate rules above and below, for a `CAST` as for a `COPY`.
+The walk is operation-facing, so it resolves the union member the access
+actually prints even when the variable's declared member agrees with the
+varnode: an indexed word `items.integer[index]` copied into `items.real[16]`
+reinterprets its bits. A named member of a stack-frame variable gives its
+printed type only under `stackviews`; with that option off the frame side is
+judged by its declared member type. A partial struct or union is never taken as a side's C type;
 the value's own type stands in for it, except for a side that is a variable of
 its own, not part of a struct or union symbol, whose declared type is that
 partial aggregate: the declaration prints it as `undefinedN`, so the side is an
