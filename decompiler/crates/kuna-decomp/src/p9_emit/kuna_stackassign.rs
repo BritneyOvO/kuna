@@ -29,16 +29,48 @@ pub(crate) fn assignment(fd: &Funcdata, op: OpId) -> Option<Assignment> {
     let output = operation.get_out()?;
     let value = fd.vbank().get(output)?;
     let stack = fd.get_arch().manage().get_stack_space()?;
-    if value.get_space().get_index() != stack.get_index() {
-        return None;
-    }
     let size = value.get_size();
     if !matches!(size, 1 | 2 | 4 | 8 | 16) {
         return None;
     }
     let scope = fd.get_scope_local()?;
-    let info =
-        scope.query_container_for_link_width(value.get_addr(), size, &Address::new_invalid())?;
+    let (address, linked_symbol) = if value.get_space().get_index() == stack.get_index() {
+        (value.get_addr().clone(), None)
+    } else {
+        let high = fd.high_bank().get(value.get_high()?)?;
+        let symbol = high.kuna_link_symbol()?;
+        if scope.database().symbol(symbol).scope != scope.scope_id() {
+            return None;
+        }
+        let offset = high.kuna_symbol_offset();
+        if offset < 0 {
+            return None;
+        }
+        let mut storage = scope
+            .symbol_storage(symbol)
+            .into_iter()
+            .filter(|(address, width)| {
+                address
+                    .get_space()
+                    .is_some_and(|space| space.get_index() == stack.get_index())
+                    && offset.checked_add(size).is_some_and(|end| end <= *width)
+            });
+        let (base, _) = storage.next()?;
+        if storage.next().is_some() {
+            return None;
+        }
+        (
+            Address::new(
+                Rc::clone(&stack),
+                stack.wrap_offset(base.get_offset().wrapping_add(offset as u64)),
+            ),
+            Some(symbol),
+        )
+    };
+    let info = scope.query_container_for_link_width(&address, size, &Address::new_invalid())?;
+    if linked_symbol.is_some_and(|symbol| symbol != info.symbol) {
+        return None;
+    }
     let root = info.sym_type.as_ref()?;
     let factory = fd.get_arch().types()?;
     let byte_member = factory
@@ -49,6 +81,9 @@ pub(crate) fn assignment(fd: &Funcdata, op: OpId) -> Option<Assignment> {
             let storage = piece.get_partial_base().unwrap_or(piece);
             super::kuna_bytearrayc::byte_array(&storage)
         });
+    if linked_symbol.is_some() && !byte_member {
+        return None;
+    }
     if !scope.database().symbol(info.symbol).is_type_locked()
         || info.is_name_undefined
         || root.get_name().starts_with("stack_views_")
@@ -59,6 +94,8 @@ pub(crate) fn assignment(fd: &Funcdata, op: OpId) -> Option<Assignment> {
     let mut operand = matches!(operation.code(), OpCode::CPUI_COPY | OpCode::CPUI_CAST)
         .then(|| operation.get_in(0))
         .flatten();
+    let mut array_cast = operation.code() == OpCode::CPUI_CAST
+        && super::kuna_bytearrayc::byte_array(value.get_type());
     if byte_member {
         // The inserted array CAST describes storage, not a numeric conversion.
         // Copy the scalar representation underneath it into the declared member.
@@ -78,7 +115,11 @@ pub(crate) fn assignment(fd: &Funcdata, op: OpId) -> Option<Assignment> {
                 return None;
             }
             operand = Some(source);
+            array_cast = true;
         }
+    }
+    if linked_symbol.is_some() && !array_cast {
+        return None;
     }
     let raw_constant = operand.is_some_and(|id| {
         fd.vbank().get(id).is_some_and(|value| value.is_constant())
