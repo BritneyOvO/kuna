@@ -3931,3 +3931,14 @@ form so each arm stays a statement LOAD copying into the member's type
 A STORE helper likewise initializes its compound literal with the rendered
 source member’s same-width scalar type (`printc.rs (op_store_ir)`), preserving
 its bytes when propagated IR types disagree.
+
+A same-width integer representation assigned to a declared pointer member needs
+an explicit pointer cast in C. CAST statements are checked using the type their
+result expression prints, rather than the input type, so a pointer-to-integer
+cast cannot leave an integer expression assigned to a pointer field, and a
+pointer-typed CAST assigned to an integer variable receives the integer cast
+(`len = (long)(char *)&len[1];`) instead of a bare pointer. When the
+variable's Symbol is a structure, array or union, that whole Symbol supplies the
+member type, since the declaration representative covers only the field. A
+scalar local or global keeps the type its declaration prints, which can differ
+from its Symbol's scalar type (`kuna_pointerstorecast.rs (target)`).
