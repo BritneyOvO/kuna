@@ -12779,6 +12779,9 @@ fn printed_integer_signedness(ct: &crate::dtype::Datatype, signed_text_byte: boo
 /// A locked scalar local is declared at its Symbol's type even when a merged
 /// storage representative retained a weaker type. Member and parameter views
 /// have their own declaration rules; only a whole, same-width local qualifies.
+/// A high that coalescing left without its Symbol binding qualifies only when
+/// a member is type-locked to the carried type; input, global and reference
+/// views never do.
 fn locked_scalar_local_type(
     fd: &Funcdata,
     high: crate::context::HighVariableId,
@@ -12788,22 +12791,40 @@ fn locked_scalar_local_type(
     if h.kuna_symbol_offset() > 0 {
         return None;
     }
-    let scope = fd.get_scope_local()?;
-    let symbol = h.kuna_link_symbol()?;
-    let record = scope.database().symbol(symbol);
-    if record.scope != scope.scope_id() || !record.is_type_locked()
-        || scope.symbol_category(symbol) == crate::database::symbol_category::FUNCTION_PARAMETER
-    {
-        return None;
-    }
-    let ty = record.dtype.as_ref()?;
+    let ty = if let Some(symbol) = h.kuna_link_symbol() {
+        let scope = fd.get_scope_local()?;
+        let record = scope.database().symbol(symbol);
+        if record.scope != scope.scope_id() || !record.is_type_locked()
+            || scope.symbol_category(symbol) == crate::database::symbol_category::FUNCTION_PARAMETER
+        {
+            return None;
+        }
+        std::rc::Rc::clone(record.dtype.as_ref()?)
+    } else {
+        if h.kuna_global() || h.kuna_ref_symbol().is_some() {
+            return None;
+        }
+        let ty = h.kuna_symbol_type()?;
+        let mut locked = false;
+        for index in 0..h.num_instances() {
+            let member = fd.vbank().get(h.get_instance(index))?;
+            if member.is_input() || member.is_persist() {
+                return None;
+            }
+            locked |= member.is_type_lock() && std::rc::Rc::ptr_eq(member.get_type(), ty);
+        }
+        if !locked {
+            return None;
+        }
+        std::rc::Rc::clone(ty)
+    };
     if !matches!(ty.get_metatype(), type_metatype::TYPE_BOOL | type_metatype::TYPE_INT
         | type_metatype::TYPE_UINT | type_metatype::TYPE_FLOAT | type_metatype::TYPE_PTR)
     {
         return None;
     }
     let representative = fd.vbank().get(decl_rep_varnode(fd, high)?)?;
-    (representative.get_size() == ty.get_size()).then(|| std::rc::Rc::clone(ty))
+    (representative.get_size() == ty.get_size()).then_some(ty)
 }
 
 /// The type the printed C declares the variable `vid` belongs to: a parameter's
