@@ -635,3 +635,6 @@ mod usepoint_pointer_constants;
 
 #[path = "pe_data_exports.rs"]
 mod pe_data_exports;
+
+#[path = "storage_load_transfers.rs"]
+mod storage_load_transfers;

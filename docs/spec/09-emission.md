@@ -3917,3 +3917,15 @@ A colliding parameter or local receives a unique local spelling; parameter stora
 types, and lock flags are preserved, and the prototype and body use the same name.
 This prevents a source-level parameter name from shadowing a function's emitted
 linkage identifier. The change is local to the rendered function.
+
+A statement LOAD rendered through a byte-copy helper copies directly into the
+printed destination member’s scalar type when its width matches the access.
+The helper must preserve the representation instead of numerically converting
+an integer temporary into a float member (`printc.rs (op_load_ir)`).
+An `iteregion` assignment diamond whose arm is such a LOAD, with the destination
+member and the helper's type disagreeing on float-ness, keeps its `if`/`else`
+form so each arm stays a statement LOAD copying into the member's type
+(`printc.rs (converts_storage_load)`); a `?:` arm would convert numerically.
+A STORE helper likewise initializes its compound literal with the rendered
+source member’s same-width scalar type (`printc.rs (op_store_ir)`), preserving
+its bytes when propagated IR types disagree.
