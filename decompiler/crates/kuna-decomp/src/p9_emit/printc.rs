@@ -5938,9 +5938,21 @@ impl PrintC {
             self.push_op(&tokens::ASSIGNMENT, Some(op_key(op)));
             self.push_vn_explicit_ir(fd, arch, out, op);
         }
+        let storage_cast = (self.out_lang == crate::kuna_lang::OutLang::C && !self.options.nocasts)
+            .then(|| outvn.and_then(|out| crate::p9_emit::kuna_pointerstorecast::target(
+                fd, op, arch.decl_high_type, || self.partial_piece_type(fd, arch, out, op, -1),
+            ))).flatten();
+        if let Some(target) = &storage_cast {
+            if crate::p9_emit::kuna_pointerstorecast::null_source(fd, op) {
+                self.push_constant_ir_fmt_sign(0, target.get_size(), op, display_format::NONE, false);
+                return;
+            }
+            self.push_cast_open(target, op);
+        }
         self.stmt_op = outvn.map(|_| op);
         self.op_push_ir(fd, arch, op, None);
         self.stmt_op = None;
+        if let Some(target) = &storage_cast { self.push_cast_close(target); }
     }
 
     /// C++ `op->getOpcode()->push(this,op,readop)` — the per-opcode RPN push
