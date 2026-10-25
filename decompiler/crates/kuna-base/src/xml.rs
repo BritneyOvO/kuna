@@ -2108,7 +2108,8 @@ mod tests {
         // and kuna-prefersplit / the compiler spec's split registers reach heritage pass 0
         // and kuna-gomorestack / the Go stack-growth entry guard folds (option gomorestack)
         // and kuna-fatstr / a read-only (ptr,len) constant pair prints as a bounded literal
-        assert_eq!(count, 586, "corpus file count drifted");
+        // and kuna-variantnames / variant-part discriminants print as variant names
+        assert_eq!(count, 587, "corpus file count drifted");
     }
 
     /// ~20 representative SLEIGH spec files across varied processors

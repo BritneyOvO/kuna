@@ -38,13 +38,13 @@ fn surface_count_is_120() {
 }
 
 #[test]
-fn settable_count_is_332() {
-    assert_eq!(kuna_num_settables(), 332);
-    assert_eq!(SETTABLE_TABLE.len(), 332);
+fn settable_count_is_333() {
+    assert_eq!(kuna_num_settables(), 333);
+    assert_eq!(SETTABLE_TABLE.len(), 333);
 }
 
 #[test]
-fn tier_counts_are_120_core_128_transform_84_analysis() {
+fn tier_counts_are_120_core_128_transform_85_analysis() {
     let mut core = 0;
     let mut transform = 0;
     let mut analysis = 0;
@@ -56,7 +56,7 @@ fn tier_counts_are_120_core_128_transform_84_analysis() {
             other => panic!("invalid tier {other:?} on {}", s.option),
         }
     }
-    assert_eq!((core, transform, analysis), (120, 128, 84));
+    assert_eq!((core, transform, analysis), (120, 128, 85));
 }
 
 #[test]
@@ -274,6 +274,11 @@ fn option_values_live_value_present_for_154() {
         // no codegen live reader (read console-side via kuna_live_value), same as
         // `libproto` above. Default-ON (DIV-65).
         "libcsigs",
+        // (kuna) Discriminant-value naming -- a load-time env bridge
+        // (`KUNA_VARIANTNAMES`, the dwarfstructs/dwarfvariants pattern) whose
+        // live state is read console-side via `kuna_live_value`, so it has no
+        // codegen live reader.
+        "variantnames",
         // (kuna) The source-language override — a loadtime env bridge
         // (`KUNA_SOURCELANG`, the rexthunk/relocobjects pattern) whose live
         // state is read console-side via `kuna_live_value` (it reports the
@@ -1078,7 +1083,8 @@ fn emit_catalog_json_static_form_brackets_and_commas() {
     // +1 for `fatstr`; its P5 row sits beside `sourcelang`.
     // +1 for `gomorestack`; its P2 row sits beside `sourcelang`.
     // +1 for `gonoreturn`; its P1 row sits beside `sourcelang`.
-    assert_eq!(json.matches("},\n").count(), 331);
+    // +1 for `variantnames`; its P5 row sits beside `dwarfvariants`.
+    assert_eq!(json.matches("},\n").count(), 332);
 }
 
 #[test]
