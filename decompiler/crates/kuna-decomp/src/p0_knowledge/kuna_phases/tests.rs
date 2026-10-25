@@ -38,13 +38,13 @@ fn surface_count_is_120() {
 }
 
 #[test]
-fn settable_count_is_330() {
-    assert_eq!(kuna_num_settables(), 330);
-    assert_eq!(SETTABLE_TABLE.len(), 330);
+fn settable_count_is_331() {
+    assert_eq!(kuna_num_settables(), 331);
+    assert_eq!(SETTABLE_TABLE.len(), 331);
 }
 
 #[test]
-fn tier_counts_are_120_core_127_transform_83_analysis() {
+fn tier_counts_are_120_core_128_transform_83_analysis() {
     let mut core = 0;
     let mut transform = 0;
     let mut analysis = 0;
@@ -56,7 +56,7 @@ fn tier_counts_are_120_core_127_transform_83_analysis() {
             other => panic!("invalid tier {other:?} on {}", s.option),
         }
     }
-    assert_eq!((core, transform, analysis), (120, 127, 83));
+    assert_eq!((core, transform, analysis), (120, 128, 83));
 }
 
 #[test]
@@ -280,6 +280,10 @@ fn option_values_live_value_present_for_154() {
         // option, `auto` by default, not the detected fact), so it has no
         // codegen live reader.
         "sourcelang",
+        // (kuna) The length-carried literal rule — three-valued, read
+        // console-side via `kuna_live_value` (its token), no codegen live
+        // reader.
+        "fatstr",
         // (kuna) The named libc/POSIX aggregate types — a load-time analysis gate
         // read through the `KUNA_LIBCTYPES` env bridge (the named shells are
         // interned while the prototype pass builds its signatures, upstream of
@@ -1067,8 +1071,9 @@ fn emit_catalog_json_static_form_brackets_and_commas() {
     // +1 for `lazyfuncs`; its P1 row sits beside `addrtakenentry`.
     // +1 for `pairrefine`; its P3 row sits beside `splitstorekeep`.
     // +1 for `sourcelang`; its P1 row sits beside `gopclntab`.
+    // +1 for `fatstr`; its P5 row sits beside `sourcelang`.
     // +1 for `gomorestack`; its P2 row sits beside `sourcelang`.
-    assert_eq!(json.matches("},\n").count(), 329);
+    assert_eq!(json.matches("},\n").count(), 330);
 }
 
 #[test]

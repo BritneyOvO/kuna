@@ -246,50 +246,51 @@
 0240              stringstore
 0241              memsetcopy
 0242              rodatastringcopy
-0243              bitfield_store
-0244              bitfield_out
-0245              bitfield_load
-0246              bitfield_in
-0247              pull_absorb
-0248              insert_absorb
+0243              fatstr
+0244              bitfield_store
+0245              bitfield_out
+0246              bitfield_load
+0247              bitfield_in
+0248              pull_absorb
+0249              insert_absorb
 
-0249                  prefercomplement
-0250                  structuretransform
-0251        !         armfloatargs
-0252        !         assignhigh
-0253        !         mergerequired
-0254        !         markexplicit
-0255        !         markimplied
-0256        !         mergemultientry
-0257        !         mergecopy
-0258        !         dominantcopy
-0259        !         dynamicsymbols
-0260        !         markindirectonly
-0261        !         mergeadjacent
-0262        !         mergetype
-0263        !         hideshadow
-0264        !         copymarker
-0265                  latedonothing
-0266                  blockstructure
-0267                  prefercomplement
-0268                  structuretransform
-0269                  branchflip
-0270                  presentcompareform
-0271        !         outputprototype
-0272        !         inputprototype
-0273        !         mapglobals
-0274        !         dynamicsymbols
-0275        !         namevars
-0276                  calltargettype
-0277        !         setcasts
-0278                  finalstructure
-0279                  gotoreduce
-0280                  taildup
-0281                  ifelseflatten
-0282                  crossjumprevert
-0283                  dedupitetail
-0284                  iteregion
-0285                  iteboolean
-0286                  paramcopyhoist
-0287        !         prototypewarnings
-0288                  stop
+0250                  prefercomplement
+0251                  structuretransform
+0252        !         armfloatargs
+0253        !         assignhigh
+0254        !         mergerequired
+0255        !         markexplicit
+0256        !         markimplied
+0257        !         mergemultientry
+0258        !         mergecopy
+0259        !         dominantcopy
+0260        !         dynamicsymbols
+0261        !         markindirectonly
+0262        !         mergeadjacent
+0263        !         mergetype
+0264        !         hideshadow
+0265        !         copymarker
+0266                  latedonothing
+0267                  blockstructure
+0268                  prefercomplement
+0269                  structuretransform
+0270                  branchflip
+0271                  presentcompareform
+0272        !         outputprototype
+0273        !         inputprototype
+0274        !         mapglobals
+0275        !         dynamicsymbols
+0276        !         namevars
+0277                  calltargettype
+0278        !         setcasts
+0279                  finalstructure
+0280                  gotoreduce
+0281                  taildup
+0282                  ifelseflatten
+0283                  crossjumprevert
+0284                  dedupitetail
+0285                  iteregion
+0286                  iteboolean
+0287                  paramcopyhoist
+0288        !         prototypewarnings
+0289                  stop
