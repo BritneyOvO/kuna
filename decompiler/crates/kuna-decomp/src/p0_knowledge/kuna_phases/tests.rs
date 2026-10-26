@@ -38,13 +38,13 @@ fn surface_count_is_120() {
 }
 
 #[test]
-fn settable_count_is_337() {
-    assert_eq!(kuna_num_settables(), 337);
-    assert_eq!(SETTABLE_TABLE.len(), 337);
+fn settable_count_is_338() {
+    assert_eq!(kuna_num_settables(), 338);
+    assert_eq!(SETTABLE_TABLE.len(), 338);
 }
 
 #[test]
-fn tier_counts_are_120_core_130_transform_87_analysis() {
+fn tier_counts_are_120_core_130_transform_88_analysis() {
     let mut core = 0;
     let mut transform = 0;
     let mut analysis = 0;
@@ -56,7 +56,7 @@ fn tier_counts_are_120_core_130_transform_87_analysis() {
             other => panic!("invalid tier {other:?} on {}", s.option),
         }
     }
-    assert_eq!((core, transform, analysis), (120, 130, 87));
+    assert_eq!((core, transform, analysis), (120, 130, 88));
 }
 
 #[test]
@@ -483,6 +483,9 @@ fn option_values_live_value_present_for_154() {
         // `tailcallentry` above. Default-off, ARM-only.
         "poolentry",
         "gopclntab",
+        // (kuna) The Go runtime-type harvest - a loadtime env bridge
+        // (KUNA_GOTYPES, the dwarfstructs pattern); no codegen live reader.
+        "gotypes",
         // (kuna) Mach-O Objective-C metadata recovery — an analysis-pass gate with
         // no codegen live reader (read console-side via kuna_live_value), like the
         // gates around it. Default-off, Mach-O-only.
@@ -1102,7 +1105,7 @@ fn emit_catalog_json_static_form_brackets_and_commas() {
     // +1 for `gowritebarrier`; its P2 row sits beside `gomorestack`.
         // +1 for `goreg`; its P1 row sits beside `goabi`.
     // +1 for `gobool`; its P4 row sits beside `sourcelang`.
-    assert_eq!(json.matches("},\n").count(), 336);
+    assert_eq!(json.matches("},\n").count(), 337);
 }
 
 #[test]
